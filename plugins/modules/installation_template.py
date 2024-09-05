@@ -117,10 +117,14 @@ def run_module():
             "customHostname": conf['customHostname'],
             "postInstallationScriptLink": conf['postInstallationScriptLink'],
             "postInstallationScriptReturn": conf['postInstallationScriptReturn'],
-            "sshKeyName": conf['sshKeyName'],
             "useDistributionKernel": conf['useDistributionKernel']},
         'defaultLanguage': conf['defaultLanguage'],
-        'templateName': conf['templateName']}
+        'templateName': conf['templateName'],
+        'userMetadata': {
+            "key": conf['sshName'],
+            "value": conf['sshValue']
+        }
+    }
     try:
         client.put(
             '/me/installationTemplate/{}'.format(conf['templateName']),
