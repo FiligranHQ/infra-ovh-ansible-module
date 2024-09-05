@@ -27,7 +27,10 @@ options:
         description: template to use to spawn the server
     ssh_key_name:
         required: false
-        description: sshkey to deploy
+        description: name of the sshkey to deploy
+    ssh_key_value:
+        required: false
+        description: ssh public key to deploy
     soft_raid_devices:
         required: false
         description: number of devices in the raid software
@@ -61,6 +64,7 @@ def run_module():
         hostname=dict(required=True),
         template=dict(required=True),
         ssh_key_name=dict(required=False, default=None),
+        ssh_key_value=dict(required=False, default=None),
         soft_raid_devices=dict(required=False, default=None)
     ))
 
@@ -74,6 +78,7 @@ def run_module():
     hostname = module.params['hostname']
     template = module.params['template']
     ssh_key_name = module.params['ssh_key_name']
+    ssh_key_value = module.params['ssh_key_value']
     soft_raid_devices = module.params['soft_raid_devices']
 
     if module.check_mode:
@@ -93,7 +98,10 @@ def run_module():
                {"language": "en",
                 "customHostname": hostname,
                 "sshKeyName": ssh_key_name,
-                "softRaidDevices": soft_raid_devices}
+                "softRaidDevices": soft_raid_devices},
+               "userMetadata":
+               {"key": ssh_key_name,
+                "value": ssh_key_value}
                }
 
     try:
