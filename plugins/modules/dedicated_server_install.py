@@ -97,7 +97,6 @@ def run_module():
     details = {"details":
                {"language": "en",
                 "customHostname": hostname,
-                "sshKeyName": ssh_key_name,
                 "softRaidDevices": soft_raid_devices},
                "userMetadata":
                {"key": ssh_key_name,
