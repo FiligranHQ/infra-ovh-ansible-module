@@ -2,31 +2,32 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import (absolute_import, division, print_function)
-__metaclass__ = type
 
 from ansible.module_utils.basic import AnsibleModule
 
+__metaclass__ = type
 
 DOCUMENTATION = '''
 ---
-module: dedicated_server_terminate
-short_description: Terminate a dedicated server renting
+module: vps_info
+short_description: Retrieve all info for a OVH vps
 description:
-    - Terminate a dedicated server renting. Need mail confirmation
-author: Synthesio SRE Team
+    - This module retrieves all info for a OVH vps
+author: Maxime Dupré / Paul Tap (armorica)
 requirements:
     - ovh >= 0.5.0
 options:
     service_name:
         required: true
-        description: The service_name to terminate
+        description: The service name
 '''
 
 EXAMPLES = r'''
-- name: Terminate a dedicated server renting
-  synthesio.ovh.dedicated_server_terminate:
+- name: Retrieve all info for an OVH vps
+  synthesio.ovh.vps_info:
     service_name: "{{ service_name }}"
   delegate_to: localhost
+  register: vps_info
 '''
 
 RETURN = ''' # '''
@@ -37,7 +38,7 @@ from ansible_collections.synthesio.ovh.plugins.module_utils.ovh import OVH, ovh_
 def run_module():
     module_args = ovh_argument_spec()
     module_args.update(dict(
-        service_name=dict(required=True),
+        service_name=dict(required=True)
     ))
 
     module = AnsibleModule(
@@ -47,16 +48,9 @@ def run_module():
     client = OVH(module)
 
     service_name = module.params['service_name']
+    result = client.wrap_call("GET", f"/vps/{service_name}")
 
-    if module.check_mode:
-        module.exit_json(changed=True, msg="Terminate {} is done, please confirm via the email sent - (dry run mode)".format(service_name))
-
-    client.wrap_call(
-        "POST",
-        f"/dedicated/server/{service_name}/terminate"
-    )
-
-    module.exit_json(changed=True, msg="Terminate {} is done, please confirm via the email sent".format(service_name))
+    module.exit_json(changed=False, **result)
 
 
 def main():

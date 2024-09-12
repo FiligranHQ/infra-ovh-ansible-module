@@ -9,11 +9,11 @@ __metaclass__ = type
 
 DOCUMENTATION = '''
 ---
-module: dedicated_server_display_name
-short_description: Modify the server display name in ovh manager
+module: vps_display_name
+short_description: Modify the vps display name in ovh manager
 description:
-    - Modify the server display name in ovh manager, to help you find your server with your own naming
-author: Synthesio SRE Team
+    - Modify the vps display name in ovh manager, to help you find your vps with your own naming
+author: Synthesio SRE Team / Paul Tap (armorica)
 requirements:
     - ovh >= 0.5.0
 options:
@@ -27,8 +27,8 @@ options:
 '''
 
 EXAMPLES = r'''
-- name: "Set display name to {{ display_name }} on server {{ ovhname }}"
-  synthesio.ovh.dedicated_server_display_name:
+- name: "Set display name to {{ display_name }} on vps {{ ovhname }}"
+  synthesio.ovh.vps_display_name:
     service_name: "{{ ovhname }}"
     display_name: "{{ display_name }}"
   delegate_to: localhost
@@ -58,22 +58,32 @@ def run_module():
     if module.check_mode:
         module.exit_json(msg="display_name has been set to {} ! - (dry run mode)".format(display_name), changed=True)
 
-    result = client.wrap_call("GET", f"/dedicated/server/{service_name}/serviceInfos")
-
-    service_id = result["serviceId"]
     resource = {
-        "resource": {
-            'displayName': display_name,
-            'name': service_name}}
+        'displayName': display_name
+    }
 
-    client.wrap_call(
-        "PUT",
-        f"/service/{service_id}",
+    # Endpoint /vps/{service_name} retrieves (among others) the current value for displayName
+
+    get_result = client.wrap_call(
+        "GET",
+        f"/vps/{service_name}",
         **resource
     )
-    module.exit_json(
-        msg="displayName succesfully set to {} for {} !".format(display_name, service_name),
-        changed=True)
+
+    # Now check if the value is different and if necessary set it
+    if get_result['displayName'] != display_name:
+        client.wrap_call(
+            "PUT",
+            f"/vps/{service_name}",
+            **resource
+        )
+        module.exit_json(
+            msg="displayName succesfully set to {} for {} !".format(display_name, service_name),
+            changed=True)
+    else:
+        module.exit_json(
+            msg="No change required to displayName {} for {} !".format(display_name, service_name),
+            changed=False)
 
 
 def main():

@@ -34,27 +34,34 @@ options:
     soft_raid_devices:
         required: false
         description: number of devices in the raid software
+    user_metadata:
+        required: false
+        description: list of key,value objects metadata
+    raid:
+        required: false
+        description: enable (md) or disable (jbod) software raid
 
 '''
 
-EXAMPLES = '''
-synthesio.ovh.dedicated_server_install:
+EXAMPLES = r'''
+- name: Install a new dedicated server
+  synthesio.ovh.dedicated_server_install:
     service_name: "ns12345.ip-1-2-3.eu"
     hostname: "server01.example.net"
     template: "debian10_64"
     soft_raid_devices: "2"
-delegate_to: localhost
+    raid: "enabled"
+    ssh_key_name: "mysshkeyname"
+    partition_scheme_name: "custom"
+    user_metadata:
+        - key: sshKey
+          value: "ssh-ed25519 AAAAC3 ..."
+  delegate_to: localhost
 '''
 
 RETURN = ''' # '''
 
-from ansible_collections.synthesio.ovh.plugins.module_utils.ovh import ovh_api_connect, ovh_argument_spec
-
-try:
-    from ovh.exceptions import APIError
-    HAS_OVH = True
-except ImportError:
-    HAS_OVH = False
+from ansible_collections.synthesio.ovh.plugins.module_utils.ovh import OVH, ovh_argument_spec
 
 
 def run_module():
@@ -63,16 +70,19 @@ def run_module():
         service_name=dict(required=True),
         hostname=dict(required=True),
         template=dict(required=True),
+        soft_raid_devices=dict(required=False, default=None),
+        partition_scheme_name=dict(required=False, default="default"),
+        raid=dict(choices=['enabled', 'disabled'], default='enabled', required=False),
+        user_metadata=dict(type="list", requirements=False, default=None),
         ssh_key_name=dict(required=False, default=None),
-        ssh_key_value=dict(required=False, default=None),
-        soft_raid_devices=dict(required=False, default=None)
+        ssh_key_value=dict(required=False, default=None)
     ))
 
     module = AnsibleModule(
         argument_spec=module_args,
         supports_check_mode=True
     )
-    client = ovh_api_connect(module)
+    client = OVH(module)
 
     service_name = module.params['service_name']
     hostname = module.params['hostname']
@@ -80,37 +90,46 @@ def run_module():
     ssh_key_name = module.params['ssh_key_name']
     ssh_key_value = module.params['ssh_key_value']
     soft_raid_devices = module.params['soft_raid_devices']
+    raid = module.params['raid']
+    partition_scheme_name = module.params['partition_scheme_name']
+    user_metadata = module.params['user_metadata']
 
     if module.check_mode:
-        module.exit_json(msg="Installation in progress on {} as {} with template {} - (dry run mode)".format(service_name, hostname, template),
+        module.exit_json(msg=f"Installation in progress on {service_name} as {hostname} with template {template} - (dry run mode)",
                          changed=True)
 
-    try:
-        compatible_templates = client.get(
-            '/dedicated/server/%s/install/compatibleTemplates' % service_name
-        )
-        if template not in compatible_templates["ovh"] and template not in compatible_templates["personal"]:
-            module.fail_json(msg="{} doesn't exist in compatibles templates".format(template))
-    except APIError as api_error:
-        return module.fail_json(msg="Failed to call OVH API: {0}".format(api_error))
+    compatible_templates = client.wrap_call(
+        "GET",
+        f"/dedicated/server/{service_name}/install/compatibleTemplates"
+    )
+    if template not in compatible_templates["ovh"] and template not in compatible_templates["personal"]:
+        module.fail_json(msg="f{template} doesn't exist in compatibles templates")
+
+    if raid == 'enabled':
+        no_raid = False
+    elif raid == 'disabled':
+        no_raid = True
 
     details = {"details":
                {"language": "en",
                 "customHostname": hostname,
-                "softRaidDevices": soft_raid_devices},
+                "softRaidDevices": soft_raid_devices,
+                "noRaid": no_raid},
                "userMetadata":
                {"key": ssh_key_name,
                 "value": ssh_key_value}
                }
 
-    try:
-        client.post(
-            '/dedicated/server/%s/install/start' % service_name, **details, templateName=template)
+    client.wrap_call(
+        "POST",
+        f"/dedicated/server/{service_name}/install/start",
+        **details,
+        templateName=template,
+        partitionSchemeName=partition_scheme_name,
+        userMetadata=user_metadata,
+    )
 
-        module.exit_json(msg="Installation in progress on {} as {} with template {}!".format(service_name, hostname, template), changed=True)
-
-    except APIError as api_error:
-        module.fail_json(msg="Failed to call OVH API: {0}".format(api_error))
+    module.exit_json(msg=f"Installation in progress on {service_name} as {hostname} with template {template}!", changed=True)
 
 
 def main():

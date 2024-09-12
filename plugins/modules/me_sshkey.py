@@ -9,30 +9,31 @@ __metaclass__ = type
 
 DOCUMENTATION = '''
 ---
-module: public_cloud_instance_info
-short_description: Retrieve all info for a OVH public cloud instance
+module: me_sshkey
+short_description: Retrieve ssh key by name
 description:
-    - This module retrieves all info from a OVH public cloud instance
+    - This module retrieves a ssh key by its name
 author: Synthesio SRE Team
 requirements:
     - ovh >= 0.5.0
 options:
-    service_name:
+    ssh_key_name:
         required: true
-        description: The service_name
-    instance_id:
-        required: true
-        description: The instance uuid
-
+        description: The ssh key name
 '''
 
 EXAMPLES = r'''
-- name: Retrieve all info for a OVH public cloud instance
-  synthesio.ovh.public_cloud_instance_info:
-    instance_id: "{{ instance_id }}"
-    service_name: "{{ service_name }}"
+- name: Retrieve ssh key by name
+  synthesio.ovh.me_sshkey:
+    ssh_key_name: "{{ ssh_key_name }}"
   delegate_to: localhost
-  register: instance_metadata
+  register: ssh_key
+
+- name: "Set the ssh key for access in rescue mode {{ service_name }}"
+  synthesio.ovh.dedicated_server_rescuesshkey:
+    service_name: "{{ service_name }}"
+    ssh_key: "{{ ssh_key.key }}"
+  delegate_to: localhost
 '''
 
 RETURN = ''' # '''
@@ -43,8 +44,7 @@ from ansible_collections.synthesio.ovh.plugins.module_utils.ovh import OVH, ovh_
 def run_module():
     module_args = ovh_argument_spec()
     module_args.update(dict(
-        service_name=dict(required=True),
-        instance_id=dict(required=True)
+        ssh_key_name=dict(required=True)
     ))
 
     module = AnsibleModule(
@@ -53,9 +53,8 @@ def run_module():
     )
     client = OVH(module)
 
-    instance_id = module.params['instance_id']
-    service_name = module.params['service_name']
-    result = client.wrap_call("GET", f"/cloud/project/{service_name}/instance/{instance_id}")
+    ssh_key_name = module.params['ssh_key_name']
+    result = client.wrap_call("GET", f"/me/sshKey/{ssh_key_name}")
 
     module.exit_json(changed=False, **result)
 

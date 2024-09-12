@@ -7,6 +7,7 @@ Tested with:
 - Python 3.9
 - [Python-ovh 1.0](https://github.com/ovh/python-ovh)
 - Ansible 2.12+
+- flake8
 
 ## Collection
 
@@ -19,6 +20,7 @@ ansible-galaxy collection install git+https://github.com/synthesio/infra-ovh-ans
 This collection provides the following modules:
 
 ```text
+dedicated_nasha_manage_partition
 dedicated_server_boot
 dedicated_server_boot_wait
 dedicated_server_display_name
@@ -27,21 +29,32 @@ dedicated_server_install
 dedicated_server_install_wait
 dedicated_server_monitoring
 dedicated_server_networkinterfacecontroller
+dedicated_server_rescuesshkey
 dedicated_server_terminate
 dedicated_server_vrack
 domain
 installation_template
+ip_info
+ip_move
 ip_reverse
+me_sshkey
+public_cloud_block_storage
+public_cloud_block_storage_instance
 public_cloud_flavorid_info
 public_cloud_imageid_info
-public_cloud_instance_info
 public_cloud_instance
 public_cloud_instance_delete
+public_cloud_instance_flavor_change
+public_cloud_instance_id
+public_cloud_instance_info
+public_cloud_instance_interface
+public_cloud_instance_shelving
 public_cloud_monthly_billing
-public_cloud_block_storage_instance
-public_cloud_block_storage
 public_cloud_object_storage
 public_cloud_object_storage_policy
+public_cloud_private_network_info
+vps_display_name
+vps_info
 ```
 
 You can read the documentation of every modules with `ansible-doc synthesio.ovh.$modules`
@@ -103,6 +116,16 @@ A few examples:
     vrack: "{{ vrackid }}"
 ```
 
+### Move IP to a given host
+
+```yaml
+- name: Move IP to a given host
+  synthesio.ovh.ip_move:
+    service_name: "{{ ovhname }}"
+    ip: "{{ ip }}"
+```
+
+
 ### Add a DNS entry for `internal.bar.example.com`
 
 ```yaml
@@ -120,7 +143,7 @@ A few examples:
 ### Install a new dedicated server
 
 ```yaml
-- Install new dedicated server
+- name: Install new dedicated server
   synthesio.ovh.dedicated_server_install:
     service_name: "ns12345.ip-1-2-3.eu"
     hostname: "server01.example.net"
@@ -136,7 +159,7 @@ A few examples:
 ### Install a new dedicated server with only 2 disks
 
 ```yaml
-- Install new dedicated server
+- name: Install new dedicated server
   synthesio.ovh.dedicated_server_install:
     service_name: "ns12345.ip-1-2-3.eu"
     hostname: "server01.example.net"

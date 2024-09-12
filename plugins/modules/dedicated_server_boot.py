@@ -23,7 +23,7 @@ options:
     boot:
         required: true
         default: harddisk
-        choices: ['harddisk','rescue','rescue-customer']
+        choices: ['harddisk','rescue-customer','ipxe-shell','poweroff']
         description:
             - Which way you want to boot your dedicated server
     force_reboot:
@@ -35,10 +35,10 @@ options:
 
 '''
 
-EXAMPLES = '''
+EXAMPLES = r'''
 - name: Change the bootid of a dedicated server to rescue
   synthesio.ovh.dedicated_server_boot:
-    service_name: {{ service_name }}
+    service_name: "{{ service_name }}"
     boot: "rescue"
     force_reboot: "true"
   delegate_to: localhost
@@ -46,20 +46,14 @@ EXAMPLES = '''
 
 RETURN = ''' # '''
 
-from ansible_collections.synthesio.ovh.plugins.module_utils.ovh import ovh_api_connect, ovh_argument_spec
-
-try:
-    from ovh.exceptions import APIError
-    HAS_OVH = True
-except ImportError:
-    HAS_OVH = False
+from ansible_collections.synthesio.ovh.plugins.module_utils.ovh import OVH, ovh_argument_spec
 
 
 def run_module():
     module_args = ovh_argument_spec()
     module_args.update(dict(
         service_name=dict(required=True),
-        boot=dict(required=True, choices=['harddisk', 'rescue', 'rescue-customer']),
+        boot=dict(required=True, choices=['harddisk', 'rescue-customer', 'ipxe-shell', 'poweroff']),
         force_reboot=dict(required=False, default=False, type='bool')
     ))
 
@@ -67,43 +61,37 @@ def run_module():
         argument_spec=module_args,
         supports_check_mode=True
     )
-    client = ovh_api_connect(module)
+    client = OVH(module)
 
     service_name = module.params['service_name']
     boot = module.params['boot']
     force_reboot = module.params['force_reboot']
     changed = False
 
-    bootid = {'harddisk': 1, 'rescue': 1122, 'rescue-customer': 46371}
+    bootid = {'harddisk': 1, 'rescue-customer': 46371, 'ipxe-shell': 203323, 'poweroff': 95083}
     if module.check_mode:
         module.exit_json(
             msg="{} is now set to boot on {}. Reboot in progress... - (dry run mode)".format(service_name, boot),
             changed=False)
 
-    try:
-        check = client.get(
-            '/dedicated/server/%s' % service_name
-        )
-    except APIError as api_error:
-        module.fail_json(msg="Failed to call OVH API: {0}".format(api_error))
+    check = client.wrap_call(
+        "GET",
+        f"/dedicated/server/{service_name}"
+    )
 
     if bootid[boot] != check['bootId']:
-        try:
-            client.put(
-                '/dedicated/server/%s' % service_name,
-                bootId=bootid[boot]
-            )
-            changed = True
-        except APIError as api_error:
-            module.fail_json(msg="Failed to call OVH API: {0}".format(api_error))
+        client.wrap_call(
+            "PUT",
+            f"/dedicated/server/{service_name}",
+            bootId=bootid[boot]
+        )
+        changed = True
 
     if force_reboot:
-        try:
-            client.post(
-                '/dedicated/server/%s/reboot' % service_name
-            )
-        except APIError as api_error:
-            module.fail_json(msg="Failed to call OVH API: {0}".format(api_error))
+        client.wrap_call(
+            "POST",
+            f"/dedicated/server/{service_name}/reboot"
+        )
 
         module.exit_json(msg="{} is now forced to reboot on {}".format(service_name, boot), changed=True)
 
