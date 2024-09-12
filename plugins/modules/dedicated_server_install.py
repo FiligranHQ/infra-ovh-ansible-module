@@ -115,9 +115,12 @@ def run_module():
                 "customHostname": hostname,
                 "softRaidDevices": soft_raid_devices,
                 "noRaid": no_raid},
-               "userMetadata":
-               {"key": ssh_key_name,
-                "value": ssh_key_value}
+               "userMetadata": [
+                    {
+                        "key": ssh_key_name,
+                        "value": ssh_key_value
+                    }
+                ]
                }
 
     client.wrap_call(
