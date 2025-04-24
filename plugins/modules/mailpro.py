@@ -37,17 +37,17 @@ options:
         required: false
         description:
             - Account's password - required for state=present
-    description:
+    duration:
         required: false
-        description: Description of the account
-    size:
-        required: false
-        description: Account size - quota in bytes
+        default: '12'
+        choices: ['1', '12']
+        description:
+            - Duration of the email pro service in months (auto renewal)
 
 '''
 
 EXAMPLES = '''
-synthesio.ovh.mailpro_create
+synthesio.ovh.mailpro
   service: emailpro-ovh-1
   domain: mydomain.com
   account: john.doe
@@ -126,7 +126,7 @@ def run_module():
             if module.params['state'] == 'absent':
                 module.exit_json(msg="{}@{} does not exist".format(account, domain), changed=False)
             else:
-                # Order a new email pro (12 months)
+                # Order a new email pro
                 client.wrap_call(
                     "POST",
                     '/order/emailpro/%s/account/%s' % (service, duration),
