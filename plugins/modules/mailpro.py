@@ -193,7 +193,7 @@ def run_module():
                             login=account,
                             renewPeriod=renewperiod,
                             quota=10,
-                            mailingfilter=['vaderetro']
+                            mailingFilter=['vaderetro']
                         )
                         if password:
                             # Set the password of the email pro account
