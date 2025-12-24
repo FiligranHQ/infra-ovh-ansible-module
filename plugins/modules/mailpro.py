@@ -111,7 +111,7 @@ def run_module():
             "GET",
             '/email/pro/%s/account' % service,
         )
-        if account in accounts:
+        if f"{account}@{domain}" in accounts:
             if module.params['state'] == 'present':
                 if password:
                     # Update the password
